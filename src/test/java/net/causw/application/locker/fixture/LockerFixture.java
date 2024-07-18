@@ -12,7 +12,12 @@ public class LockerFixture {
                 .lockerNumber(123L) // 사물함 번호
                 .isActive(true)
                 .location(LockerLocationFixture.createDefaultLocation())
-                .expireDate(null);
+                .expireDate(LocalDateTime.now());
+    }
+
+    public static Locker createDefaultLocker() {
+        return baseLocker()
+                .build();
     }
 
 

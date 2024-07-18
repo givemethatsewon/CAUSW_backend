@@ -31,4 +31,10 @@ public class UserFixture {
         return user;
     }
 
+    public static User createUserWithRole(Role role) {
+        return baseUser()
+                .role(role)
+                .build();
+    }
+
 }

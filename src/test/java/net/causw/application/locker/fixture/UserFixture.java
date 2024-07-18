@@ -7,6 +7,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 
 public class UserFixture {
+
     private static User.UserBuilder baseUser() {
         return User.builder()
                 .email("test@example.com")
@@ -25,7 +26,7 @@ public class UserFixture {
     public static User createDefaultUser() {
         User user = baseUser()
                 .build();
-        ReflectionTestUtils.setField(user, "id" , "test_id"); // LockerResponseDto의 isMine 검증을 위해 필요
+        ReflectionTestUtils.setField(user, "id" , LockerTextFixture.USER_ID); // LockerResponseDto의 isMine 검증을 위해 필요
 
         return user;
     }

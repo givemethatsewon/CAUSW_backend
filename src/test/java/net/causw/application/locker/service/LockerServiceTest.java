@@ -10,6 +10,9 @@ import net.causw.application.locker.LockerActionFactory;
 import net.causw.application.locker.LockerService;
 import net.causw.application.locker.fixture.LockerFixture;
 import net.causw.application.locker.fixture.UserFixture;
+import net.causw.domain.exceptions.BadRequestException;
+import net.causw.domain.exceptions.ErrorCode;
+import net.causw.domain.model.util.MessageUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +22,8 @@ import org.mockito.Mockito;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.causw.application.locker.fixture.LockerTextFixture.*;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 public class LockerServiceTest {
@@ -66,9 +70,9 @@ public class LockerServiceTest {
     }
 
     @Test
-    @DisplayName("findById 테스트 - locker 존재하면 LockerResponseDto 리턴")
-    public void findByIdTest() {
-        // given
+    @DisplayName("findById 성공 테스트 - locker가 존재할 때")
+    public void findById_success() {
+        // Given
         User expectedUser = UserFixture.createDefaultUser();
         Locker expectedLocker = LockerFixture.createAssignedLocker(expectedUser);
 
@@ -76,10 +80,10 @@ public class LockerServiceTest {
         when(userRepository.findById(expectedUser.getId())).thenReturn(Optional.of(expectedUser)); // Mock 객체 행동 정의
         when(lockerRepository.findByIdForRead(expectedLocker.getId())).thenReturn(Optional.of(expectedLocker));
 
-        // when
+        // When
         LockerResponseDto actualLockerResponseDto = lockerService.findById(expectedLocker.getId(), expectedUser.getId());
 
-        // then
+        // Then
         ArgumentCaptor<String> userIdCaptor = ArgumentCaptor.forClass(String.class); // parameterized test
         ArgumentCaptor<String> lockerIdCaptor = ArgumentCaptor.forClass(String.class);
 
@@ -96,16 +100,47 @@ public class LockerServiceTest {
         assertThat(actualLockerResponseDto.getExpireAt()).isEqualTo(expectedLocker.getExpireDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")));
     }
 
-
-
-    @DisplayName("Test for Test")
     @Test
-    public void testForTest() {
-        Integer expectedLockerNumber = 1;
-        Integer actualLockerNumber = 1;
+    @DisplayName("findById 에러 테스트 - user가 존재하지 않을 때")
+    void findById_fail_WhenUserNotFound() {
+        // Given
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
-        assertThat(actualLockerNumber).isEqualTo(expectedLockerNumber);
+        // When
+        assertThatThrownBy(() -> lockerService.findById(LOCKER_ID, USER_ID))
+                // Then
+                .isInstanceOf(BadRequestException.class)
+                .satisfies(exception -> {
+                    BadRequestException badRequestException = (BadRequestException) exception;
+                    assertThat(badRequestException.getErrorCode()).isEqualTo(ErrorCode.ROW_DOES_NOT_EXIST);
+                    assertThat(badRequestException.getMessage()).isEqualTo(MessageUtil.LOGIN_USER_NOT_FOUND);
+                });
+
+        verify(userRepository, times(1)).findById(USER_ID);
+        verify(lockerRepository, never()).findByIdForRead(any());
     }
+
+    @Test
+    @DisplayName("findById 에러 테스트 - Locker가 존재하지 않을 때")
+    void findById_fail_WhenLockerNotFound() {
+        // Given
+        when(userRepository.findById(USER_ID)).thenReturn(Optional.of(UserFixture.createDefaultUser()));
+        when(lockerRepository.findById(LOCKER_ID)).thenReturn(Optional.empty());
+
+        // When
+        assertThatThrownBy(() -> lockerService.findById(LOCKER_ID, USER_ID))
+        // Then
+                .isInstanceOf(BadRequestException.class)
+                .satisfies(exception -> {
+                    BadRequestException badRequestException = (BadRequestException) exception;
+                    assertThat(badRequestException.getErrorCode()).isEqualTo(ErrorCode.ROW_DOES_NOT_EXIST);
+                    assertThat(badRequestException.getMessage()).isEqualTo(MessageUtil.LOCKER_NOT_FOUND);
+                });
+
+        verify(userRepository, times(1)).findById(USER_ID);
+        verify(lockerRepository, times(1)).findByIdForRead(LOCKER_ID);
+    }
+
 
 
 

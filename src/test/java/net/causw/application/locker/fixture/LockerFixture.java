@@ -5,9 +5,11 @@ import net.causw.adapter.persistence.user.User;
 import java.time.LocalDateTime;
 
 public class LockerFixture {
+    public String LockerId = "testId";
+
     private static Locker.LockerBuilder baseLocker() {
         return Locker.builder()
-                .lockerNumber(1L)
+                .lockerNumber(123L) // 사물함 번호
                 .isActive(true)
                 .location(LockerLocationFixture.createDefaultLocation())
                 .expireDate(null);

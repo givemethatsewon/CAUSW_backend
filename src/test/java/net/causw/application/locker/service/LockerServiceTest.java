@@ -23,8 +23,12 @@ import net.causw.domain.model.util.MessageUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
@@ -33,48 +37,31 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 public class LockerServiceTest {
+    @Mock
     private LockerRepository lockerRepository;  // 사물함 정보 처리
+    @Mock
     private UserRepository userRepository; // 사용자 정보 처리 -> 권한 확인
+    @Mock
     private LockerLogRepository lockerLogRepository; // 사물함 관련 로그를 추적
+    @Mock
     private LockerLocationRepository lockerLocationRepository; // 사물함 위치 정보 처리
+    @Mock
     private Validator validator; // 객체 유효성 검증
+    @Mock
     private LockerActionFactory lockerActionFactory; // 사물함 관련 작업 처리
-    private CommonService commonService; // 공통적으로 사용하는 서비스 로직
+    @Mock
     private TextFieldRepository textFieldRepository;
+    @Mock
     private FlagRepository flagRepository;
+
+    @InjectMocks
+    private CommonService commonService; // 공통적으로 사용하는 서비스 로직
+
+    @InjectMocks
     private LockerService lockerService;
 
-    @BeforeEach
-    public void init() {
-        // commonService init
-        textFieldRepository = Mockito.mock(TextFieldRepository.class);
-        flagRepository = Mockito.mock(FlagRepository.class);
-
-        commonService = new CommonService(
-                textFieldRepository,
-                flagRepository
-        );
-
-        // lockerService init
-        lockerRepository = Mockito.mock(LockerRepository.class);
-        userRepository = Mockito.mock(UserRepository.class);
-        lockerLogRepository = Mockito.mock(LockerLogRepository.class);
-        lockerLocationRepository = Mockito.mock(LockerLocationRepository.class);
-        validator = Mockito.mock(Validator.class);
-        lockerActionFactory = Mockito.mock(LockerActionFactory.class);
-
-        lockerService = new LockerService(
-                lockerRepository,
-                userRepository,
-                lockerLogRepository,
-                lockerLocationRepository,
-                validator,
-                lockerActionFactory,
-                commonService
-        );
-
-    }
 
     @Test
     @DisplayName("findById 성공 테스트")
@@ -130,7 +117,7 @@ public class LockerServiceTest {
     void findById_fail_WhenLockerNotFound() {
         // Given
         when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createDefaultUser()));
-        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.empty());
+        when(lockerRepository.findByIdForRead(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> lockerService.findById(LockerTextFixture.LOCKER_ID, LockerTextFixture.USER_ID))
@@ -182,6 +169,8 @@ public class LockerServiceTest {
         assertThat(actualLockerResponseDto.getIsActive()).isTrue();
         assertThat(actualLockerResponseDto.getIsMine()).isFalse(); // 이거 False 여야 하는지 확인 필요
         assertThat(actualLockerResponseDto.getExpireAt()).isNull();
+
+
 
         // 저장된 Locker 확인
         Locker capturedLocker = lockerCaptor.getValue();

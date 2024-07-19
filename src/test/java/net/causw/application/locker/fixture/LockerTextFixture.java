@@ -9,5 +9,7 @@ public class LockerTextFixture {
     public static final String LOCKER_LOCATION_NAME = "location123";
     public static final String LOCKER_LOCATION_ID = "locker_location_123";
     public static final String INVALID_LOCKER_LOCATION_ID = "invalid_locker_location_id";
+    public static final String INVALID_LOCKER_ACTION = "invalid_locker_action";
+    public static final String TEST_MESSAGE = "test message";
 
 }

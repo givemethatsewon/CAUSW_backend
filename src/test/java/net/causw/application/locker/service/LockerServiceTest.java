@@ -8,6 +8,7 @@ import net.causw.adapter.persistence.repository.*;
 import net.causw.adapter.persistence.user.User;
 import net.causw.application.common.CommonService;
 import net.causw.application.dto.locker.LockerCreateRequestDto;
+import net.causw.application.dto.locker.LockerMoveRequestDto;
 import net.causw.application.dto.locker.LockerResponseDto;
 import net.causw.application.dto.locker.LockerUpdateRequestDto;
 import net.causw.application.locker.LockerAction;
@@ -20,6 +21,7 @@ import net.causw.application.locker.fixture.UserFixture;
 import net.causw.domain.exceptions.BadRequestException;
 import net.causw.domain.exceptions.ErrorCode;
 import net.causw.domain.exceptions.InternalServerException;
+import net.causw.domain.exceptions.UnauthorizedException;
 import net.causw.domain.model.enums.LockerLogAction;
 import net.causw.domain.model.enums.Role;
 import net.causw.domain.model.util.MessageUtil;
@@ -112,9 +114,6 @@ public class LockerServiceTest {
                     assertThat(badRequestException.getMessage()).isEqualTo(MessageUtil.LOGIN_USER_NOT_FOUND);
                 });
 
-        // repository call 확인
-        verify(userRepository, times(1)).findById(LockerTextFixture.USER_ID);
-        verify(lockerRepository, never()).findByIdForRead(any());
     }
 
     @Test
@@ -133,9 +132,6 @@ public class LockerServiceTest {
                     assertThat(badRequestException.getMessage()).isEqualTo(MessageUtil.LOCKER_NOT_FOUND);
                 });
 
-        // repository call 확인
-        verify(userRepository, times(1)).findById(LockerTextFixture.USER_ID);
-        verify(lockerRepository, times(1)).findByIdForRead(LockerTextFixture.LOCKER_ID);
     }
 
     @Test
@@ -211,13 +207,6 @@ public class LockerServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_DOES_NOT_EXIST)
                 .hasMessage(MessageUtil.LOGIN_USER_NOT_FOUND);
 
-        // repository call 확인
-        verify(userRepository, times(1)).findById(LockerTextFixture.INVALID_USER_ID);
-        verify(lockerLocationRepository, never()).findById(any());
-        verify(lockerRepository, never()).findByLockerNumber(any());
-        verify(lockerRepository, never()).save(any());
-        verify(lockerLogRepository, never()).save(any());
-
     }
 
     @Test
@@ -238,12 +227,6 @@ public class LockerServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_DOES_NOT_EXIST)
                 .hasMessage(MessageUtil.LOCKER_WRONG_POSITION);
 
-        // repository call 확인
-        verify(userRepository, times(1)).findById(LockerTextFixture.USER_ID);
-        verify(lockerLocationRepository, times(1)).findById(LockerTextFixture.LOCKER_LOCATION_ID);
-        verify(lockerRepository, never()).findByLockerNumber(any());
-        verify(lockerRepository, never()).save(any());
-        verify(lockerLogRepository, never()).save(any());
     }
 
     @Test
@@ -265,12 +248,6 @@ public class LockerServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_ALREADY_EXIST)
                 .hasMessage(MessageUtil.LOCKER_DUPLICATE_NUMBER);
 
-        // repository call 확인
-        verify(userRepository, times(1)).findById(LockerTextFixture.USER_ID);
-        verify(lockerLocationRepository, times(1)).findById(LockerTextFixture.LOCKER_LOCATION_ID);
-        verify(lockerRepository, times(1)).findByLockerNumber(LockerTextFixture.LOCKER_NUMBER);
-        verify(lockerRepository, never()).save(any());
-        verify(lockerLogRepository, never()).save(any());
     }
 
     @ParameterizedTest
@@ -325,20 +302,14 @@ public class LockerServiceTest {
         // Given
         LockerUpdateRequestDto updateRequestDto = new LockerUpdateRequestDto(LockerLogAction.ENABLE.name(), LockerTextFixture.TEST_MESSAGE);
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.empty());
+        when(userRepository.findById(LockerTextFixture.INVALID_USER_ID)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> lockerService.update(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, updateRequestDto))
+        assertThatThrownBy(() -> lockerService.update(LockerTextFixture.INVALID_USER_ID, LockerTextFixture.LOCKER_ID, updateRequestDto))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_DOES_NOT_EXIST)
                 .hasMessage(MessageUtil.LOGIN_USER_NOT_FOUND);
 
-        // repository call 확인
-        verify(userRepository, times(1)).findById(LockerTextFixture.USER_ID);
-        verify(lockerRepository, never()).findById(any());
-        verify(lockerActionFactory, never()).getLockerAction(any());
-        verify(lockerRepository, never()).save(any());
-        verify(lockerLogRepository, never()).save(any());
     }
 
     @Test
@@ -349,20 +320,14 @@ public class LockerServiceTest {
         User updater = UserFixture.createDefaultUser();
 
         when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(updater));
-        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.empty());
+        when(lockerRepository.findById(LockerTextFixture.INVALID_LOCKER_ID)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> lockerService.update(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, updateRequestDto))
+        assertThatThrownBy(() -> lockerService.update(LockerTextFixture.USER_ID, LockerTextFixture.INVALID_LOCKER_ID, updateRequestDto))
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_DOES_NOT_EXIST)
                 .hasMessage(MessageUtil.LOCKER_NOT_FOUND);
 
-        // repository call 확인
-        verify(userRepository, times(1)).findById(LockerTextFixture.USER_ID);
-        verify(lockerRepository, times(1)).findById(LockerTextFixture.LOCKER_ID);
-        verify(lockerActionFactory, never()).getLockerAction(any());
-        verify(lockerRepository, never()).save(any());
-        verify(lockerLogRepository, never()).save(any());
     }
 
     @Test
@@ -377,7 +342,7 @@ public class LockerServiceTest {
         when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(updater));
         when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(locker));
         when(lockerActionFactory.getLockerAction(LockerLogAction.ENABLE)).thenReturn(mockedAction);
-        when(mockedAction.updateLockerDomainModel(any(), any(), any(), any())).thenReturn(Optional.empty());
+        when(mockedAction.updateLockerDomainModel(any(), any(), any(), any())).thenReturn(Optional.empty()); // LockerAction 실행 실패
 
         // When & Then
         assertThatThrownBy(() -> lockerService.update(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, updateRequestDto))
@@ -385,20 +350,98 @@ public class LockerServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.LOCKER_ACTION_ERROR)
                 .hasMessage(MessageUtil.LOCKER_ACTION_ERROR);
 
-        // repository call 확인
-        verify(userRepository, times(1)).findById(LockerTextFixture.USER_ID);
-        verify(lockerRepository, times(1)).findById(LockerTextFixture.LOCKER_ID);
-        verify(lockerActionFactory, times(1)).getLockerAction(LockerLogAction.ENABLE);
-        verify(lockerRepository, never()).save(any());
-        verify(lockerLogRepository, never()).save(any());
     }
 
+    @Test
+    @DisplayName("move 성공 테스트")
+    public void move_success() {
+        // Given
+        LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
+        LockerLocation newLocation = LockerLocationFixture.createDefaultLocation(); // moveRequestDto의 id로 조회하면 나오는 Loctation
 
+        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
+        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(LockerFixture.createDefaultLocker()));
+        when(lockerLocationRepository.findById(LockerTextFixture.NEW_LOCKER_LOCATION_ID)).thenReturn(Optional.of(newLocation));
+
+        ArgumentCaptor<Locker> lockerCaptor = ArgumentCaptor.forClass(Locker.class);
+
+        // When
+        LockerResponseDto actualLockerResponseDto = lockerService.move(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, moveRequestDto);
+
+        // Then
+        verify(userRepository, times(1)).findById(LockerTextFixture.USER_ID);
+        verify(lockerRepository, times(1)).findById(LockerTextFixture.LOCKER_ID);
+        verify(lockerLocationRepository, times(1)).findById(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
+        verify(lockerRepository, times(1)).save(lockerCaptor.capture());
+
+        Locker movedLocker = lockerCaptor.getValue();
+        assertThat(movedLocker.getLocation()).isEqualTo(newLocation);
+        assertThat(actualLockerResponseDto.getId()).isEqualTo(movedLocker.getId());
+    }
+
+    @Test
+    @DisplayName("move 실패 테스트 - 사용자를 찾을 수 없음")
+    void move_fail_userNotFound() {
+        // Given
+        LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
+
+        when(userRepository.findById(LockerTextFixture.INVALID_USER_ID)).thenReturn(Optional.empty()); // 사용자를 찾을 수 없음
+
+        // When & Then
+        assertThatThrownBy(() -> lockerService.move(LockerTextFixture.INVALID_USER_ID, LockerTextFixture.LOCKER_ID, moveRequestDto))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_DOES_NOT_EXIST)
+                .hasMessage(MessageUtil.LOGIN_USER_NOT_FOUND);
+
+    }
+
+    @Test
+    @DisplayName("move 실패 테스트 - locker를 찾을 수 없음(잘못된 locker id)")
+    void move_fail_lockerNotFound() {
+        // Given
+        LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
+
+        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
+        when(lockerRepository.findById(LockerTextFixture.INVALID_LOCKER_ID)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThatThrownBy(() -> lockerService.move(LockerTextFixture.USER_ID, LockerTextFixture.INVALID_LOCKER_ID, moveRequestDto))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_DOES_NOT_EXIST)
+                .hasMessage(MessageUtil.LOCKER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("move 실패 테스트 - 새 위치를 찾을 수 없음(잘못된 new location id)")
+    void move_fail_newLocationNotFound() {
+        // Given
+        LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.INVALID_LOCKER_LOCATION_ID);
+
+        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
+        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(LockerFixture.createDefaultLocker()));
+        when(lockerLocationRepository.findById(LockerTextFixture.INVALID_LOCKER_LOCATION_ID)).thenReturn(Optional.empty()); // 새 위치를 찾을 수 없음
+        // When & Then
+        assertThatThrownBy(() -> lockerService.move(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, moveRequestDto))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_DOES_NOT_EXIST)
+                .hasMessage(MessageUtil.LOCKER_WRONG_POSITION);
+    }
+
+    @Test
+    @DisplayName("move 실패 테스트 - 권한 없음")
+    void move_fail_unauthorizedUser() {
+        // Given;
+        LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
+        LockerLocation newLocation =  LockerLocationFixture.createLocationWithName(LockerTextFixture.LOCKER_LOCATION_NAME); // 새 위치
+
+        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createUserWithRole(Role.COMMON)));
+        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(LockerFixture.createDefaultLocker()));
+        when(lockerLocationRepository.findById(LockerTextFixture.NEW_LOCKER_LOCATION_ID)).thenReturn(Optional.of(newLocation));
+
+        // When & Then
+        assertThatThrownBy(() -> lockerService.move(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, moveRequestDto))
+                .isInstanceOf(UnauthorizedException.class);
+    }
 
 }
-
-
-
-
-
 

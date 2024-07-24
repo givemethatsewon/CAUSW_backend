@@ -36,12 +36,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.context.SpringBootTest;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -77,8 +79,9 @@ public class LockerServiceTest {
         User expectedUser = UserFixture.createDefaultUser();
         Locker expectedLocker = LockerFixture.createAssignedLocker(expectedUser);
 
-        when(userRepository.findById(expectedUser.getId())).thenReturn(Optional.of(expectedUser));
-        when(lockerRepository.findByIdForRead(expectedLocker.getId())).thenReturn(Optional.of(expectedLocker));
+        // given - willReturn
+        given(userRepository.findById(expectedUser.getId())).willReturn(Optional.of(expectedUser));
+        given(lockerRepository.findByIdForRead(expectedLocker.getId())).willReturn(Optional.of(expectedLocker));
 
         // When
         LockerResponseDto actualLockerResponseDto = lockerService.findById(expectedLocker.getId(), expectedUser.getId());
@@ -103,7 +106,7 @@ public class LockerServiceTest {
     @DisplayName("findById 에러 테스트 - user가 존재하지 않을 때")
     void findById_fail_WhenUserNotFound() {
         // Given
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.empty());
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> lockerService.findById(LockerTextFixture.LOCKER_ID, LockerTextFixture.USER_ID))
@@ -120,8 +123,8 @@ public class LockerServiceTest {
     @DisplayName("findById 에러 테스트 - Locker가 존재하지 않을 때")
     void findById_fail_WhenLockerNotFound() {
         // Given
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createDefaultUser()));
-        when(lockerRepository.findByIdForRead(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.empty());
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(UserFixture.createDefaultUser()));
+        given(lockerRepository.findByIdForRead(LockerTextFixture.LOCKER_ID)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> lockerService.findById(LockerTextFixture.LOCKER_ID, LockerTextFixture.USER_ID))
@@ -144,10 +147,10 @@ public class LockerServiceTest {
         LockerLocation location = LockerLocationFixture.createDefaultLocation();
         Locker expectedLocker = LockerFixture.createDefaultLocker();
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(creator));
-        when(lockerLocationRepository.findById(LockerTextFixture.LOCKER_LOCATION_ID)).thenReturn(Optional.of(location));
-        when(lockerRepository.findByLockerNumber(LockerTextFixture.LOCKER_NUMBER)).thenReturn(Optional.empty());
-        when(lockerRepository.save(any(Locker.class))).thenReturn(expectedLocker);
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(creator));
+        given(lockerLocationRepository.findById(LockerTextFixture.LOCKER_LOCATION_ID)).willReturn(Optional.of(location));
+        given(lockerRepository.findByLockerNumber(LockerTextFixture.LOCKER_NUMBER)).willReturn(Optional.empty());
+        given(lockerRepository.save(any(Locker.class))).willReturn(expectedLocker);
 
         ArgumentCaptor<Locker> lockerCaptor = ArgumentCaptor.forClass(Locker.class);
         ArgumentCaptor<LockerLog> lockerLogCaptor = ArgumentCaptor.forClass(LockerLog.class);
@@ -198,7 +201,7 @@ public class LockerServiceTest {
         String creatorId = LockerTextFixture.INVALID_USER_ID;
         LockerCreateRequestDto requestDto = new LockerCreateRequestDto(LockerTextFixture.LOCKER_NUMBER, LockerTextFixture.LOCKER_LOCATION_NAME);
 
-        when(userRepository.findById(creatorId)).thenReturn(Optional.empty()); // 오류 상황
+        given(userRepository.findById(creatorId)).willReturn(Optional.empty()); // 오류 상황
 
         // When & Then
         // Error 내용 확인
@@ -217,8 +220,8 @@ public class LockerServiceTest {
         LockerCreateRequestDto requestDto = new LockerCreateRequestDto(LockerTextFixture.LOCKER_NUMBER, LockerTextFixture.LOCKER_LOCATION_ID);
         User creator = UserFixture.createUserWithRole(Role.PRESIDENT);
 
-        when(userRepository.findById(creatorId)).thenReturn(Optional.of(creator));
-        when(lockerLocationRepository.findById(requestDto.getLockerLocationId())).thenReturn(Optional.empty()); // 오류 상황
+        given(userRepository.findById(creatorId)).willReturn(Optional.of(creator));
+        given(lockerLocationRepository.findById(requestDto.getLockerLocationId())).willReturn(Optional.empty()); // 오류 상황
 
         // When
         assertThatThrownBy(() -> lockerService.create(creatorId, requestDto))
@@ -238,9 +241,9 @@ public class LockerServiceTest {
         User creator = UserFixture.createUserWithRole(Role.PRESIDENT);
         LockerLocation location = LockerLocationFixture.createDefaultLocation();
 
-        when(userRepository.findById(creatorId)).thenReturn(Optional.of(creator));
-        when(lockerLocationRepository.findById(requestDto.getLockerLocationId())).thenReturn(Optional.of(location));
-        when(lockerRepository.findByLockerNumber(requestDto.getLockerNumber())).thenReturn(Optional.of(LockerFixture.createDefaultLocker())); // LockerNumber로 쿼리한 Locker가 이미 존재
+        given(userRepository.findById(creatorId)).willReturn(Optional.of(creator));
+        given(lockerLocationRepository.findById(requestDto.getLockerLocationId())).willReturn(Optional.of(location));
+        given(lockerRepository.findByLockerNumber(requestDto.getLockerNumber())).willReturn(Optional.of(LockerFixture.createDefaultLocker())); // LockerNumber로 쿼리한 Locker가 이미 존재
 
         // When & Then
         assertThatThrownBy(() -> lockerService.create(creatorId, requestDto))
@@ -260,10 +263,10 @@ public class LockerServiceTest {
         Locker locker = LockerFixture.createDefaultLocker();
         LockerAction mockedAction = mock(LockerAction.class);
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(updater));
-        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(locker));
-        when(lockerActionFactory.getLockerAction(action)).thenReturn(mockedAction);
-        when(mockedAction.updateLockerDomainModel(any(), any(), any(), any())).thenReturn(Optional.of(locker));
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(updater));
+        given(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).willReturn(Optional.of(locker));
+        given(lockerActionFactory.getLockerAction(action)).willReturn(mockedAction);
+        given(mockedAction.updateLockerDomainModel(any(), any(), any(), any())).willReturn(Optional.of(locker));
 
         ArgumentCaptor<Locker> lockerCaptor = ArgumentCaptor.forClass(Locker.class);
         ArgumentCaptor<LockerLog> lockerLogCaptor = ArgumentCaptor.forClass(LockerLog.class);
@@ -302,7 +305,7 @@ public class LockerServiceTest {
         // Given
         LockerUpdateRequestDto updateRequestDto = new LockerUpdateRequestDto(LockerLogAction.ENABLE.name(), LockerTextFixture.TEST_MESSAGE);
 
-        when(userRepository.findById(LockerTextFixture.INVALID_USER_ID)).thenReturn(Optional.empty());
+        given(userRepository.findById(LockerTextFixture.INVALID_USER_ID)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> lockerService.update(LockerTextFixture.INVALID_USER_ID, LockerTextFixture.LOCKER_ID, updateRequestDto))
@@ -319,8 +322,8 @@ public class LockerServiceTest {
         LockerUpdateRequestDto updateRequestDto = new LockerUpdateRequestDto(LockerLogAction.ENABLE.name(), LockerTextFixture.TEST_MESSAGE);
         User updater = UserFixture.createDefaultUser();
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(updater));
-        when(lockerRepository.findById(LockerTextFixture.INVALID_LOCKER_ID)).thenReturn(Optional.empty());
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(updater));
+        given(lockerRepository.findById(LockerTextFixture.INVALID_LOCKER_ID)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> lockerService.update(LockerTextFixture.USER_ID, LockerTextFixture.INVALID_LOCKER_ID, updateRequestDto))
@@ -339,10 +342,10 @@ public class LockerServiceTest {
         Locker locker = LockerFixture.createDefaultLocker();
         LockerAction mockedAction = mock(LockerAction.class);
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(updater));
-        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(locker));
-        when(lockerActionFactory.getLockerAction(LockerLogAction.ENABLE)).thenReturn(mockedAction);
-        when(mockedAction.updateLockerDomainModel(any(), any(), any(), any())).thenReturn(Optional.empty()); // LockerAction 실행 실패
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(updater));
+        given(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).willReturn(Optional.of(locker));
+        given(lockerActionFactory.getLockerAction(LockerLogAction.ENABLE)).willReturn(mockedAction);
+        given(mockedAction.updateLockerDomainModel(any(), any(), any(), any())).willReturn(Optional.empty()); // LockerAction 실행 실패
 
         // When & Then
         assertThatThrownBy(() -> lockerService.update(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, updateRequestDto))
@@ -359,9 +362,9 @@ public class LockerServiceTest {
         LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
         LockerLocation newLocation = LockerLocationFixture.createDefaultLocation(); // moveRequestDto의 id로 조회하면 나오는 Loctation
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
-        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(LockerFixture.createDefaultLocker()));
-        when(lockerLocationRepository.findById(LockerTextFixture.NEW_LOCKER_LOCATION_ID)).thenReturn(Optional.of(newLocation));
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
+        given(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).willReturn(Optional.of(LockerFixture.createDefaultLocker()));
+        given(lockerLocationRepository.findById(LockerTextFixture.NEW_LOCKER_LOCATION_ID)).willReturn(Optional.of(newLocation));
 
         ArgumentCaptor<Locker> lockerCaptor = ArgumentCaptor.forClass(Locker.class);
 
@@ -385,7 +388,7 @@ public class LockerServiceTest {
         // Given
         LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
 
-        when(userRepository.findById(LockerTextFixture.INVALID_USER_ID)).thenReturn(Optional.empty()); // 사용자를 찾을 수 없음
+        given(userRepository.findById(LockerTextFixture.INVALID_USER_ID)).willReturn(Optional.empty()); // 사용자를 찾을 수 없음
 
         // When & Then
         assertThatThrownBy(() -> lockerService.move(LockerTextFixture.INVALID_USER_ID, LockerTextFixture.LOCKER_ID, moveRequestDto))
@@ -401,8 +404,8 @@ public class LockerServiceTest {
         // Given
         LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
-        when(lockerRepository.findById(LockerTextFixture.INVALID_LOCKER_ID)).thenReturn(Optional.empty());
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
+        given(lockerRepository.findById(LockerTextFixture.INVALID_LOCKER_ID)).willReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> lockerService.move(LockerTextFixture.USER_ID, LockerTextFixture.INVALID_LOCKER_ID, moveRequestDto))
@@ -417,9 +420,9 @@ public class LockerServiceTest {
         // Given
         LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.INVALID_LOCKER_LOCATION_ID);
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
-        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(LockerFixture.createDefaultLocker()));
-        when(lockerLocationRepository.findById(LockerTextFixture.INVALID_LOCKER_LOCATION_ID)).thenReturn(Optional.empty()); // 새 위치를 찾을 수 없음
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(UserFixture.createUserWithRole(Role.PRESIDENT)));
+        given(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).willReturn(Optional.of(LockerFixture.createDefaultLocker()));
+        given(lockerLocationRepository.findById(LockerTextFixture.INVALID_LOCKER_LOCATION_ID)).willReturn(Optional.empty()); // 새 위치를 찾을 수 없음
         // When & Then
         assertThatThrownBy(() -> lockerService.move(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, moveRequestDto))
                 .isInstanceOf(BadRequestException.class)
@@ -434,9 +437,9 @@ public class LockerServiceTest {
         LockerMoveRequestDto moveRequestDto = new LockerMoveRequestDto(LockerTextFixture.NEW_LOCKER_LOCATION_ID);
         LockerLocation newLocation =  LockerLocationFixture.createLocationWithName(LockerTextFixture.LOCKER_LOCATION_NAME); // 새 위치
 
-        when(userRepository.findById(LockerTextFixture.USER_ID)).thenReturn(Optional.of(UserFixture.createUserWithRole(Role.COMMON)));
-        when(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).thenReturn(Optional.of(LockerFixture.createDefaultLocker()));
-        when(lockerLocationRepository.findById(LockerTextFixture.NEW_LOCKER_LOCATION_ID)).thenReturn(Optional.of(newLocation));
+        given(userRepository.findById(LockerTextFixture.USER_ID)).willReturn(Optional.of(UserFixture.createUserWithRole(Role.COMMON)));
+        given(lockerRepository.findById(LockerTextFixture.LOCKER_ID)).willReturn(Optional.of(LockerFixture.createDefaultLocker()));
+        given(lockerLocationRepository.findById(LockerTextFixture.NEW_LOCKER_LOCATION_ID)).willReturn(Optional.of(newLocation));
 
         // When & Then
         assertThatThrownBy(() -> lockerService.move(LockerTextFixture.USER_ID, LockerTextFixture.LOCKER_ID, moveRequestDto))

@@ -229,7 +229,6 @@ public class LockerServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROW_DOES_NOT_EXIST)
                 .hasMessage(MessageUtil.LOCKER_WRONG_POSITION);
-
     }
 
     @Test
